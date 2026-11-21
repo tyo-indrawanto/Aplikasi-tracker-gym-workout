@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#0f172a" />
+  <meta name="description" content="Pelacak latihan gym offline untuk program tambah massa otot (bulking) dan diet (cutting)." />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>IronLog — Pelacak Gym Offline</title>
+
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" type="image/png" sizes="192x192" href="assets/icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="assets/icons/icon-192.png" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <!-- HEADER -->
+    <header class="app-header">
+      <div class="header-top">
+        <div class="brand">
+          <span class="brand-title">IronLog</span>
+          <span id="offline-badge" class="status-badge status-online">Siap Offline</span>
+        </div>
+        <button id="goal-pill-btn" class="goal-pill goal-bulking" type="button" title="Ubah Fokus Program">
+          <span id="goal-pill-text">Mode: Tambah Massa Otot</span>
+        </button>
+      </div>
+      <p id="goal-guidance-banner" class="goal-banner">
+        Fokus Bulking: Dorong progressive overload (naikkan beban atau repetisi bertahap).
+      </p>
+    </header>
+
+    <!-- REST TIMER BAR (MUNCUL OTOMATIS / BISA DIBUKA MANUAL) -->
+    <section id="rest-timer-bar" class="timer-bar hidden" aria-live="polite">
+      <div class="timer-info">
+        <span class="timer-label">Istirahat Antar-Set</span>
+        <span id="timer-display" class="timer-clock">01:30</span>
+      </div>
+      <div class="timer-controls">
+        <button id="timer-minus-btn" type="button" class="btn-chip">-15d</button>
+        <button id="timer-plus-btn" type="button" class="btn-chip">+15d</button>
+        <button id="timer-toggle-btn" type="button" class="btn-chip btn-accent">Mulai</button>
+        <button id="timer-reset-btn" type="button" class="btn-chip">Reset</button>
+      </div>
+    </section>
+
+    <!-- KONTEN UTAMA BERBASIS TAB -->
+    <main class="app-main">
+      <!-- TAB 1: CATAT LATIHAN -->
+      <section id="tab-workout" class="tab-panel active" role="tabpanel">
+        <!-- Pilih / Tambah Gerakan -->
+        <div class="card">
+          <div class="card-header">
+            <label for="exercise-select" class="field-label">Gerakan Latihan</label>
+            <button id="toggle-add-exercise-btn" type="button" class="btn-text">+ Gerakan Baru</button>
+          </div>
+
+          <select id="exercise-select" class="input-control"></select>
+
+          <div id="add-exercise-box" class="inline-add-box hidden">
+            <input
+              type="text"
+              id="new-exercise-input"
+              class="input-control"
+              placeholder="Contoh: Incline Dumbbell Press"
+              maxlength="60"
+            />
+            <button id="save-exercise-btn" type="button" class="btn btn-primary">Tambah</button>
+          </div>
+
+          <!-- Referensi Sesi Terakhir (Auto-Fill Info) -->
+          <div id="last-session-ref" class="ref-box">
+            <span class="ref-title">Referensi Sesi Terakhir:</span>
+            <span id="last-session-text" class="ref-value">Belum ada riwayat untuk gerakan ini.</span>
+          </div>
+        </div>
+
+        <!-- Form Input Set, Beban, Repetisi & Catatan -->
+        <form id="set-form" class="card" autocomplete="off">
+          <div class="grid-2">
+            <div class="field-group">
+              <label for="weight-input" class="field-label">
+                Beban (<span class="unit-label">kg</span>)
+              </label>
+              <div class="stepper-row">
+                <button type="button" class="btn-step" data-target="weight-input" data-step="-2.5">-</button>
+                <input
+                  type="number"
+                  id="weight-input"
+                  class="input-control text-center"
+                  inputmode="decimal"
+                  step="0.25"
+                  min="0"
+                  placeholder="0"
+                  required
+                />
+                <button type="button" class="btn-step" data-target="weight-input" data-step="2.5">+</button>
+              </div>
+            </div>
+
+            <div class="field-group">
+              <label for="reps-input" class="field-label">Repetisi (Reps)</label>
+              <div class="stepper-row">
+                <button type="button" class="btn-step" data-target="reps-input" data-step="-1">-</button>
+                <input
+                  type="number"
+                  id="reps-input"
+                  class="input-control text-center"
+                  inputmode="numeric"
+                  step="1"
+                  min="1"
+                  placeholder="0"
+                  required
+                />
+                <button type="button" class="btn-step" data-target="reps-input" data-step="1">+</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Estimasi 1RM & Volume Real-Time -->
+          <div class="metrics-preview">
+            <div class="metric-pill">
+              <span class="metric-name">Estimasi 1RM</span>
+              <strong id="live-1rm-value">0 kg</strong>
+            </div>
+            <div class="metric-pill">
+              <span class="metric-name">Volume Set</span>
+              <strong id="live-volume-value">0 kg</strong>
+            </div>
+          </div>
+
+          <!-- Catatan Singkat per Set / Gerakan -->
+          <div class="field-group">
+            <label for="set-note-input" class="field-label">Catatan Singkat (Opsional)</label>
+            <input
+              type="text"
+              id="set-note-input"
+              class="input-control"
+              placeholder="Misal: Tidur kurang, defisit minggu ke-3, form solid..."
+              maxlength="120"
+            />
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-block">
+            Simpan Set & Mulai Istirahat
+          </button>
+        </form>
+
+        <!-- Daftar Set Hari Ini -->
+        <div class="card">
+          <div class="card-header">
+            <h2 class="section-title">Sesi Hari Ini</h2>
+            <span id="today-summary-badge" class="badge-muted">0 Set</span>
+          </div>
+          <ul id="today-sets-list" class="set-list">
+            <li class="empty-state">Belum ada set tercatat hari ini.</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- TAB 2: RIWAYAT & PROGRES -->
+      <section id="tab-history" class="tab-panel hidden" role="tabpanel">
+        <div class="card">
+          <div class="card-header">
+            <h2 class="section-title">Analisis Progres</h2>
+            <select id="history-filter-select" class="input-control input-compact">
+              <option value="ALL">Semua Gerakan</option>
+            </select>
+          </div>
+
+          <!-- Ringkasan Metrik sesuai Mode Bulking / Cutting -->
+          <div class="stats-grid">
+            <div class="stat-box">
+              <span class="stat-label">Rekor Estimasi 1RM</span>
+              <strong id="stat-best-1rm" class="stat-value">-</strong>
+            </div>
+            <div class="stat-box">
+              <span class="stat-label">Beban Tertinggi</span>
+              <strong id="stat-max-weight" class="stat-value">-</strong>
+            </div>
+            <div class="stat-box">
+              <span class="stat-label" id="stat-mode-label">Tren Volume</span>
+              <strong id="stat-mode-value" class="stat-value">-</strong>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h2 class="section-title">Riwayat Latihan</h2>
+          </div>
+          <div id="history-list" class="history-container">
+            <p class="empty-state">Belum ada riwayat sesi tersimpan.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 3: PENGATURAN & BACKUP DATA -->
+      <section id="tab-settings" class="tab-panel hidden" role="tabpanel">
+        <div class="card">
+          <h2 class="section-title">Program & Preferensi</h2>
+
+          <div class="field-group">
+            <label for="program-goal-select" class="field-label">Tujuan Latihan Aktif</label>
+            <select id="program-goal-select" class="input-control">
+              <option value="bulking">Tambah Massa Otot (Bulking / Hypertrophy)</option>
+              <option value="cutting">Diet / Turun Lemak (Cutting / Pertahankan Otot)</option>
+            </select>
+          </div>
+
+          <div class="grid-2">
+            <div class="field-group">
+              <label for="unit-select" class="field-label">Satuan Beban</label>
+              <select id="unit-select" class="input-control">
+                <option value="kg">Kilogram (kg)</option>
+                <option value="lbs">Pounds (lbs)</option>
+              </select>
+            </div>
+
+            <div class="field-group">
+              <label for="default-rest-input" class="field-label">Timer Istirahat (detik)</label>
+              <input
+                type="number"
+                id="default-rest-input"
+                class="input-control"
+                min="15"
+                max="600"
+                step="15"
+                value="90"
+              />
+            </div>
+          </div>
+
+          <button id="save-settings-btn" type="button" class="btn btn-primary btn-block">
+            Simpan Pengaturan
+          </button>
+        </div>
+
+        <!-- Backup & Restore JSON -->
+        <div class="card">
+          <h2 class="section-title">Cadangkan & Pulihkan Data Lokal</h2>
+          <p class="helper-text">
+            Semua data tersimpan di memori lokal HP ini. Ekspor file JSON secara berkala agar progres aman saat ganti HP atau membersihkan cache browser.
+          </p>
+
+          <div class="stack-actions">
+            <button id="export-json-btn" type="button" class="btn btn-secondary btn-block">
+              Ekspor Data (.JSON)
+            </button>
+
+            <label for="import-json-input" class="btn btn-outline btn-block file-btn-label">
+              Impor Data (.JSON)
+            </label>
+            <input type="file" id="import-json-input" accept="application/json,.json" class="hidden" />
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- NAVIGASI BAWAH (MOBILE-FIRST) -->
+    <nav class="bottom-nav" aria-label="Navigasi Utama">
+      <button type="button" class="nav-item active" data-tab="tab-workout">
+        <span class="nav-icon">🏋️</span>
+        <span class="nav-text">Latihan</span>
+      </button>
+      <button type="button" class="nav-item" data-tab="tab-history">
+        <span class="nav-icon">📈</span>
+        <span class="nav-text">Progres</span>
+      </button>
+      <button type="button" class="nav-item" data-tab="tab-settings">
+        <span class="nav-icon">⚙️</span>
+        <span class="nav-text">Program</span>
+      </button>
+    </nav>
+  </div>
+
+  <!-- TOAST NOTIFIKASI RINGAN -->
+  <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
+
+  <!-- MODUL JAVASCRIPT -->
+  <script src="js/storage.js"></script>
+  <script src="js/metrics.js"></script>
+  <script src="js/timer.js"></script>
+  <script src="js/workout.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
